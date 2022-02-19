@@ -1,6 +1,6 @@
+using System.Text;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
-using System.Text;
 
 namespace WumboLauncher
 {
@@ -34,7 +34,8 @@ namespace WumboLauncher
             { "Play Mode", "playMode" },
             { "Status", "status" },
             { "Notes", "notes" },
-            { "Original Description", "originalDescription" }
+            { "Original Description", "originalDescription" },
+            { "", "activeDataOnDisk" }
         };
         // Titles to be displayed above each column
         string[] columnHeaders = { "Title", "Developer", "Publisher" };
@@ -42,8 +43,8 @@ namespace WumboLauncher
         List<double> columnWidths = new();
         // Names of tags to be filtered
         List<string> filteredTags = new();
-        // Characters that cause issues in searches
-        string unsafeChars = "%_\'\"";
+        // Characters that cause issues in searches ( % _ ' " )
+        string unsafeChars = "%_\'\""; 
         // Query fragments used to fetch entries
         string queryLibrary = "arcade";
         int queryOrderBy = 0;
@@ -78,40 +79,12 @@ namespace WumboLauncher
         private void Main_load(object sender, EventArgs e)
         {
             // Create configuration file if one doesn't exist
-            if (File.Exists("config.fp") && File.ReadAllText("config.fp").Length > 0)
-            {
+            if (File.Exists("config.json") && File.ReadAllText("config.json").Length > 0)
                 Config.Read();
             }
             else
             {
                 Config.Write();
-            }
-
-            // Load filtered tags
-            if (File.Exists("filters.json"))
-            {
-                using (StreamReader jsonStream = new("filters.json"))
-                {
-                    dynamic? filterArray = JsonConvert.DeserializeObject(jsonStream.ReadToEnd());
-
-                    foreach (var item in filterArray)
-                    {
-                        if (item.filtered == true)
-                        {
-                            foreach (var tag in item.tags)
-                            {
-                                filteredTags.Add(tag.ToString());
-                            }
-                        }
-                    }
-                }
-            }
-            else
-            {
-                MessageBox.Show(
-                    "filters.json was not found, and as a result the archive will be unfiltered. Use at your own risk.",
-                    "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning
-                );
             }
 
             // Why Visual Studio doesn't let me do this the regular way, I don't know
@@ -176,13 +149,7 @@ namespace WumboLauncher
         private void SearchButton_click(object sender, EventArgs e) { ExecuteSearchQuery(); }
 
         // Display setttings menu when Settings button is clicked
-        private void SettingsButton_click(object sender, EventArgs e)
-        {
-            Settings SettingsMenu = new();
-            SettingsMenu.FormClosed += new FormClosedEventHandler(SettingsMenu_formClosed);
-
-            SettingsMenu.ShowDialog();
-        }
+        private void SettingsButton_click(object sender, EventArgs e) { OpenSettings(); }
 
         // Reload database when 
         private void SettingsMenu_formClosed(object? sender, FormClosedEventArgs e)
@@ -280,8 +247,7 @@ namespace WumboLauncher
 
             string entryData = @"{\rtf1 ";
 
-            for (int i = 1; i < metadataOutput.Count; i++)
-            {
+            for (int i = 1; i < metadataOutput.Count - 1; i++)
                 if (metadataOutput[i] != "")
                 {
                     if (metadataFields[i, 1] == "notes" || metadataFields[i, 1] == "originalDescription")
@@ -312,33 +278,34 @@ namespace WumboLauncher
                 string[] imageTree = { entryId.Substring(0, 2), entryId.Substring(2, 2) };
                 string imagePath = $"\\Data\\Images\\{folder}\\{imageTree[0]}\\{imageTree[1]}\\{entryId}.png";
 
-                if (File.Exists(Config.Data[0] + imagePath))
+                if (File.Exists(Config.FlashpointPath + imagePath))
                 {
                     if (folder == "Logos")
                     {
-                        ArchiveImagesLogo.Image = Image.FromFile(Config.Data[0] + imagePath);
+                        ArchiveImagesLogo.Image = Image.FromFile(Config.FlashpointPath + imagePath);
                         logoLoaded = true;
                     }
                     else if (folder == "Screenshots")
                     {
-                        ArchiveImagesScreenshot.Image = Image.FromFile(Config.Data[0] + imagePath);
+                        ArchiveImagesScreenshot.Image = Image.FromFile(Config.FlashpointPath + imagePath);
                         screenshotLoaded = true;
                     }
                 }
                 else
                 {
                     if (folder == "Logos")
-                    {
-                        ArchiveImagesLogo.ImageLocation = Config.Data[2] + imagePath;
-                    }
+                        ArchiveImagesLogo.ImageLocation = Config.FlashpointServer + imagePath;
                     else if (folder == "Screenshots")
-                    {
-                        ArchiveImagesScreenshot.ImageLocation = Config.Data[2] + imagePath;
-                    }
+                        ArchiveImagesScreenshot.ImageLocation = Config.FlashpointServer + imagePath;
                 }
             }
-            
+
             // Footer
+
+            if (metadataOutput[15] == "1")
+                PlayButton.Text = "Play";
+            else
+                PlayButton.Text = "Play (Legacy)";
 
             PlayButton.Visible = true;
         }
@@ -348,9 +315,9 @@ namespace WumboLauncher
         {
             int entryIndex = queryCache[ArchiveList.SelectedIndices[0]].Index;
 
-            if (File.Exists(Config.Data[1]))
+            if (File.Exists(Config.CLIFpPath))
             {
-                LaunchEntry.StartInfo.FileName = Config.Data[1];
+                LaunchEntry.StartInfo.FileName = Config.CLIFpPath;
                 LaunchEntry.StartInfo.Arguments = $"play -i {DatabaseQuery("id", entryIndex)[0]}";
                 LaunchEntry.Start();
             }
@@ -470,7 +437,7 @@ namespace WumboLauncher
                 Config.NeedsRefresh = false;
             }
 
-            string databasePath = Config.Data[0] + @"\Data\flashpoint.sqlite";
+            string databasePath = Config.FlashpointPath + @"\Data\flashpoint.sqlite";
             byte[] header = new byte[16];
 
             if (File.Exists(databasePath))
@@ -493,6 +460,10 @@ namespace WumboLauncher
 
                         prevWidth = ArchiveList.ClientSize.Width;
                     }
+
+                    LoadFilteredTags();
+                    RefreshDatabase();
+
                     if (queryLibrary == "arcade")
                     {
                         ArchiveRadioGames.Checked = true;
@@ -513,6 +484,9 @@ namespace WumboLauncher
 
             MessageBox.Show("Database is either corrupted or missing!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             TabControl.SelectTab(0);
+            OpenSettings();
+
+            Config.NeedsRefresh = true;
         }
 
         // Generate new cache and refresh list
@@ -600,11 +574,33 @@ namespace WumboLauncher
             }
         }
 
+        private void LoadFilteredTags()
+        {
+            filteredTags.Clear();
+
+            if (File.Exists("filters.json"))
+            {
+                using (StreamReader jsonStream = new("filters.json"))
+                {
+                    dynamic? filterArray = JsonConvert.DeserializeObject(jsonStream.ReadToEnd());
+
+                    foreach (var item in filterArray)
+                        if (item.filtered == true)
+                            foreach (var tag in item.tags)
+                                filteredTags.Add(tag.ToString());
+                }
+            }
+            else
+                MessageBox.Show(
+                    "filters.json was not found, and as a result the archive will be unfiltered. Use at your own risk.",
+                    "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning
+                );
+        }
+
         // Return items from the Flashpoint database
         private List<string> DatabaseQuery(string column, int offset = -1)
         {
-            // TODO: make this persistent, close on-exit.
-            SqliteConnection connection = new($"Data Source={Config.Data[0]}\\Data\\flashpoint.sqlite");
+            SqliteConnection connection = new($"Data Source={Config.FlashpointPath}\\Data\\flashpoint.sqlite");
             connection.Open();
 
             SqliteCommand command = new(
@@ -701,6 +697,14 @@ namespace WumboLauncher
             RefreshDatabase();
 
             TabControl.SelectTab(1);
+        }
+
+        private void OpenSettings()
+        {
+            Settings SettingsMenu = new Settings();
+            SettingsMenu.FormClosed += new FormClosedEventHandler(SettingsMenu_formClosed);
+
+            SettingsMenu.ShowDialog();
         }
 
         // Resize columns proportional to new list size
