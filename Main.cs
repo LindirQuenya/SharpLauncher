@@ -73,9 +73,13 @@ namespace WumboLauncher
         {
             // Create configuration file if one doesn't exist
             if (File.Exists("config.fp") && File.ReadAllText("config.fp").Length > 0)
+            {
                 Config.Read();
+            }
             else
+            {
                 Config.Write();
+            }
 
             // Load filtered tags
             if (File.Exists("filters.json"))
@@ -85,16 +89,24 @@ namespace WumboLauncher
                     dynamic? filterArray = JsonConvert.DeserializeObject(jsonStream.ReadToEnd());
 
                     foreach (var item in filterArray)
+                    {
                         if (item.filtered == true)
+                        {
                             foreach (var tag in item.tags)
+                            {
                                 filteredTags.Add(tag.ToString());
+                            }
+                        }
+                    }
                 }
             }
             else
+            {
                 MessageBox.Show(
                     "filters.json was not found, and as a result the archive will be unfiltered. Use at your own risk.",
                     "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning
                 );
+            }
 
             // Why Visual Studio doesn't let me do this the regular way, I don't know
             SearchBox.AutoSize = false;
@@ -107,9 +119,13 @@ namespace WumboLauncher
         {
             // Scale column widths to list width
             if (columnChanged)
+            {
                 ScaleColumns();
+            }
             else
+            {
                 AdjustColumns();
+            }
 
             prevWidth = ArchiveList.ClientSize.Width;
 
@@ -124,11 +140,17 @@ namespace WumboLauncher
             if (((TabControl)sender).SelectedIndex == 1)
             {
                 if (Config.NeedsRefresh)
+                {
                     InitializeDatabase();
+                }
                 else if (columnChanged)
+                {
                     ScaleColumns();
+                }
                 else
+                {
                     AdjustColumns();
+                }
             }
         }
 
@@ -148,7 +170,7 @@ namespace WumboLauncher
         // Display setttings menu when Settings button is clicked
         private void SettingsButton_click(object sender, EventArgs e)
         {
-            Settings SettingsMenu = new Settings();
+            Settings SettingsMenu = new();
             SettingsMenu.FormClosed += new FormClosedEventHandler(SettingsMenu_formClosed);
 
             SettingsMenu.ShowDialog();
@@ -160,7 +182,9 @@ namespace WumboLauncher
             Config.Read();
 
             if (TabControl.SelectedIndex == 1 && Config.NeedsRefresh)
+            {
                 InitializeDatabase();
+            }
         }
 
         // Display items on list when fetched
@@ -196,18 +220,24 @@ namespace WumboLauncher
             List<string> metadataOutput = new(metadataFields.GetLength(0));
 
             for (int i = 0; i < metadataFields.GetLength(0); i++)
+            {
                 metadataOutput.Add(
                     DatabaseQuery(metadataFields[i, 1], entryIndex)[0]
                 );
+            }
 
             // Header
 
             ArchiveInfoTitle.Text = metadataOutput[0];
 
             if (metadataOutput[3] != "")
+            {
                 ArchiveInfoDeveloper.Text = $"by {metadataOutput[3]}";
+            }
             else
+            {
                 ArchiveInfoDeveloper.Text = "by unknown developer";
+            }
 
             ArchiveInfoData.Height = GetInfoHeight();
 
@@ -216,13 +246,19 @@ namespace WumboLauncher
             string entryData = @"{\rtf1 ";
 
             for (int i = 1; i < metadataOutput.Count; i++)
+            {
                 if (metadataOutput[i] != "")
                 {
                     if (metadataFields[i, 1] == "notes" || metadataFields[i, 1] == "originalDescription")
+                    {
                         entryData += $"\\line\\b {metadataFields[i, 0]}:\\line\\b0 {ToUnicode(metadataOutput[i])}\\line";
+                    }
                     else
+                    {
                         entryData += $"\\b {metadataFields[i, 0]}: \\b0 {ToUnicode(metadataOutput[i])}\\line";
+                    }
                 }
+            }
 
             entryData += "}";
 
@@ -231,8 +267,10 @@ namespace WumboLauncher
             // Images
 
             if (!ArchiveImagesContainer.Visible)
+            {
                 ArchiveImagesContainer.Visible = true;
-            
+            }
+
             string entryId = DatabaseQuery("id", entryIndex)[0];
             foreach (string folder in new string[] { "Logos", "Screenshots" })
             {
@@ -255,9 +293,13 @@ namespace WumboLauncher
                 else
                 {
                     if (folder == "Logos")
+                    {
                         ArchiveImagesLogo.ImageLocation = Config.Data[2] + imagePath;
+                    }
                     else if (folder == "Screenshots")
+                    {
                         ArchiveImagesScreenshot.ImageLocation = Config.Data[2] + imagePath;
+                    }
                 }
             }
             
@@ -278,7 +320,9 @@ namespace WumboLauncher
                 LaunchEntry.Start();
             }
             else
+            {
                 MessageBox.Show("CLIFp not found!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         // Update columnWidths in case column is changed manually
@@ -300,8 +344,12 @@ namespace WumboLauncher
 
             // Remove any indicators that might be visible
             for (int i = 0; i < columnHeaders.Length; i++)
+            {
                 if (ArchiveList.Columns[i].Text != columnHeaders[i])
+                {
                     ArchiveList.Columns[i].Text = columnHeaders[i];
+                }
+            }
 
             // Add a new arrow indicator to column header
             string arrow = char.ConvertFromUtf32(0x2192 + queryDirection);
@@ -327,9 +375,13 @@ namespace WumboLauncher
             if (checkedRadio.Checked)
             {
                 if (checkedRadio.Name == "ArchiveRadioGames")
+                {
                     queryLibrary = "arcade";
+                }
                 else if (checkedRadio.Name == "ArchiveRadioAnimations")
+                {
                     queryLibrary = "theatre";
+                }
 
                 RefreshDatabase();
             }
@@ -338,9 +390,13 @@ namespace WumboLauncher
         private void ArchiveImages_loadCompleted(object sender, System.ComponentModel.AsyncCompletedEventArgs e)
         {
             if (((PictureBox)sender).Name == "ArchiveImagesLogo")
+            {
                 logoLoaded = true;
+            }
             else if (((PictureBox)sender).Name == "ArchiveImagesScreenshot")
+            {
                 screenshotLoaded = true;
+            }
         }
 
         // Display picture viwwer 
@@ -373,7 +429,9 @@ namespace WumboLauncher
         private void InitializeDatabase()
         {
             if (Config.NeedsRefresh)
+            {
                 Config.NeedsRefresh = false;
+            }
 
             string databasePath = Config.Data[0] + @"\Data\flashpoint.sqlite";
             byte[] header = new byte[16];
@@ -381,7 +439,9 @@ namespace WumboLauncher
             if (File.Exists(databasePath))
             {
                 using (FileStream fileStream = new(databasePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                {
                     fileStream.Read(header, 0, 16);
+                }
 
                 if (Encoding.ASCII.GetString(header).Contains("SQLite format"))
                 {
@@ -400,9 +460,13 @@ namespace WumboLauncher
                     RefreshDatabase();
 
                     if (queryLibrary == "arcade")
+                    {
                         ArchiveRadioGames.Checked = true;
+                    }
                     else if (queryLibrary == "theatre")
+                    {
                         ArchiveRadioAnimations.Checked = true;
+                    }
 
                     return;
                 }
@@ -431,7 +495,9 @@ namespace WumboLauncher
 
             // If item is not filtered, create QueryItem object and add to queryCache
             for (int i = 0; i < queryTitle.Count; i++)
+            {
                 if (!filteredTags.Intersect(queryTags[i].Split("; ")).Any())
+                {
                     queryCache.Add(new QueryItem
                     {
                         Title = queryTitle[i],
@@ -439,6 +505,8 @@ namespace WumboLauncher
                         Publisher = queryPublisher[i],
                         Index = queryIndex[i]
                     });
+                }
+            }
 
             // Sort new queryCache
             SortColumns();
@@ -452,9 +520,13 @@ namespace WumboLauncher
 
             // Prevent column widths from breaking out of list
             if (columnChanged)
+            {
                 ScaleColumns();
+            }
             else
+            {
                 AdjustColumns();
+            }
         }
 
         // Return items from the Flashpoint database
@@ -473,8 +545,12 @@ namespace WumboLauncher
             List<string> data = new();
 
             using (SqliteDataReader dataReader = command.ExecuteReader())
+            {
                 while (dataReader.Read())
+                {
                     data.Add(dataReader.IsDBNull(0) ? "" : dataReader.GetString(0));
+                }
+            }
 
             connection.Close();
 
@@ -488,9 +564,13 @@ namespace WumboLauncher
             foreach (char inputChar in SearchBox.Text.ToLower())
             {
                 if (unsafeChars.Contains(inputChar))
-                    safeQuery.Append("_");
+                {
+                    safeQuery.Append('_');
+                }
                 else
+                {
                     safeQuery.Append(inputChar);
+                }
             }
 
             querySearch = safeQuery.ToString();
@@ -523,7 +603,9 @@ namespace WumboLauncher
             ArchiveList.EndUpdate();
 
             if (columnChanged)
+            {
                 columnChanged = false;
+            }
         }
 
         // Sort items by a specific column
@@ -563,8 +645,12 @@ namespace WumboLauncher
             int desiredHeight = ArchiveInfoContainer.Height - 14;
 
             foreach (Control control in ArchiveInfoContainer.Controls)
+            {
                 if (control.Name != "ArchiveInfoData")
+                {
                     desiredHeight -= control.Height;
+                }
+            }
 
             return desiredHeight;
         }
@@ -592,11 +678,17 @@ namespace WumboLauncher
             foreach (char c in data)
             {
                 if (c == '\\' || c == '{' || c == '}')
+                {
                     escapedData.Append(@"\" + c);
+                }
                 else if (c <= 0x7f)
+                {
                     escapedData.Append(c);
+                }
                 else
+                {
                     escapedData.Append(@"\u" + Convert.ToUInt32(c) + "?");
+                }
             }
 
             return escapedData.ToString().Replace("\n", @"\line ");
