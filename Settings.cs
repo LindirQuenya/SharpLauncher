@@ -25,7 +25,9 @@ namespace WumboLauncher
             CommonOpenFileDialog PathDialog = new() { IsFolderPicker = true };
 
             if (PathDialog.ShowDialog() == CommonFileDialogResult.Ok)
+            {
                 PathInput.Text = PathDialog.FileName;
+            }
         }
 
         // Browse for CLIFp path
@@ -34,7 +36,9 @@ namespace WumboLauncher
             OpenFileDialog CLIFpDialog = new() { Filter = "Executable files (*.exe)|*.exe" };
 
             if (CLIFpDialog.ShowDialog() == DialogResult.OK)
+            {
                 CLIFpInput.Text = CLIFpDialog.FileName;
+            }
         }
 
         // Load tag filters into list
@@ -82,7 +86,9 @@ namespace WumboLauncher
                 );
 
                 if (warningResult == DialogResult.No)
+                {
                     return;
+                }
             }
 
             Config.FlashpointPath = PathInput.Text;
@@ -91,10 +97,13 @@ namespace WumboLauncher
             Config.Write();
 
             if (filterJSON.Length > 0)
+            {
                 using (FileStream filters = new("filters.json", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
                 {
                     lock (filters)
+                    {
                         filters.SetLength(0);
+                    }
 
                     dynamic? filterArray = JsonConvert.DeserializeObject(filterJSON);
 
@@ -107,6 +116,7 @@ namespace WumboLauncher
 
                     filters.Write(Encoding.ASCII.GetBytes(filterArray.ToString()));
                 }
+            }
 
             Config.NeedsRefresh = true;
 

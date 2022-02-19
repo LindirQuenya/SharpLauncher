@@ -80,6 +80,7 @@ namespace WumboLauncher
         {
             // Create configuration file if one doesn't exist
             if (File.Exists("config.json") && File.ReadAllText("config.json").Length > 0)
+            {
                 Config.Read();
             }
             else
@@ -248,6 +249,7 @@ namespace WumboLauncher
             string entryData = @"{\rtf1 ";
 
             for (int i = 1; i < metadataOutput.Count - 1; i++)
+            {
                 if (metadataOutput[i] != "")
                 {
                     if (metadataFields[i, 1] == "notes" || metadataFields[i, 1] == "originalDescription")
@@ -294,18 +296,26 @@ namespace WumboLauncher
                 else
                 {
                     if (folder == "Logos")
+                    {
                         ArchiveImagesLogo.ImageLocation = Config.FlashpointServer + imagePath;
+                    }
                     else if (folder == "Screenshots")
+                    {
                         ArchiveImagesScreenshot.ImageLocation = Config.FlashpointServer + imagePath;
+                    }
                 }
             }
 
             // Footer
 
             if (metadataOutput[15] == "1")
+            {
                 PlayButton.Text = "Play";
+            }
             else
+            {
                 PlayButton.Text = "Play (Legacy)";
+            }
 
             PlayButton.Visible = true;
         }
@@ -386,7 +396,7 @@ namespace WumboLauncher
                 }
                 if (queryLibrary != queryLibraryOld)
                 {
-                    RefreshDatabase();
+                    RefreshDatabase(library: queryLibrary);
                 }
             }
         }
@@ -462,7 +472,6 @@ namespace WumboLauncher
                     }
 
                     LoadFilteredTags();
-                    RefreshDatabase();
 
                     if (queryLibrary == "arcade")
                     {
@@ -503,7 +512,7 @@ namespace WumboLauncher
             // This is the lowest string, in SQL's mind.
             string lastTitle = "";
             int i, listlen = 0;
-            using (SqliteConnection connection = new($"Data Source={Config.Data[0]}\\Data\\flashpoint.sqlite"))
+            using (SqliteConnection connection = new($"Data Source={Config.FlashpointPath}\\Data\\flashpoint.sqlite"))
             {
                 connection.Open();
                 while (!atEnd)
@@ -585,16 +594,24 @@ namespace WumboLauncher
                     dynamic? filterArray = JsonConvert.DeserializeObject(jsonStream.ReadToEnd());
 
                     foreach (var item in filterArray)
+                    {
                         if (item.filtered == true)
+                        {
                             foreach (var tag in item.tags)
+                            {
                                 filteredTags.Add(tag.ToString());
+                            }
+                        }
+                    }
                 }
             }
             else
+            {
                 MessageBox.Show(
                     "filters.json was not found, and as a result the archive will be unfiltered. Use at your own risk.",
                     "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning
                 );
+            }
         }
 
         // Return items from the Flashpoint database
@@ -694,7 +711,7 @@ namespace WumboLauncher
             }
 
             querySearch = safeQuery.ToString();
-            RefreshDatabase();
+            RefreshDatabase(searchFor: querySearch, library: queryLibrary);
 
             TabControl.SelectTab(1);
         }
